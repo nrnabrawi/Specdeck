@@ -35,7 +35,7 @@ export class CommandService {
           if (!ag?.detected) throw new Error(`${req.agent} was not found on PATH.`)
           if (!ag.enabled) throw new Error(`${ag.label} is turned off in Add-ons.`)
         }
-        cmd = a.stageCommand(p.path, req.unitId, req.stage, req.agent)
+        cmd = a.stageCommand(p.path, req.unitId, req.stage, req.agent, req.input)
       }
     }
     const token = randomUUID()

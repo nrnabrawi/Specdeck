@@ -136,16 +136,19 @@ export const speckitAdapter: FrameworkAdapter = {
     return cmd('specify', ['init', '--here', '--force', '--non-interactive', '--integration', key, '--script', 'sh'], root, 'exec')
   },
 
-  stageCommand(root, unitName, stage, agent) {
+  stageCommand(root, unitName, stage, agent, input) {
     assertId(unitName)
-    if (!STAGES.includes(stage)) throw new Error(`No command for stage "${stage}"`)
+    const text = input?.replace(/\s+/g, ' ').trim() ?? ''
+    // 'create' = a new feature from the wizard: /speckit-specify <description>; unitName is only recorded with the run
+    if (stage === 'create' && !text) throw new Error('Describe the feature first.')
+    if (!STAGES.includes(stage) && stage !== 'create') throw new Error(`No command for stage "${stage}"`)
     const a = AGENT[agent as AgentKey]
     // An existing feature is in "specify" only while spec.md still has open questions, so the next step is clarify.
-    const skill = `speckit-${stage === 'specify' ? 'clarify' : stage}`
+    const skill = `speckit-${stage === 'create' ? 'specify' : stage === 'specify' ? 'clarify' : stage}`
     if (!existsSync(join(root, ...a.skillsDir, skill, 'SKILL.md')))
       throw new Error(`${a.prefix}${skill} is not installed for ${a.label}. Initialise Spec Kit with this agent (specify init --integration ${agent}).`)
     // Skills resolve the feature from .specify/feature.json (the last created one), so name the target explicitly.
-    const target = `Feature directory: specs/${unitName}`
+    const target = stage === 'create' ? text : `Feature directory: specs/${unitName}${text ? ` ${text}` : ''}`
     return cmd(agent, [`${a.prefix}${skill} ${target}`], root, 'pty', { agent, unitId: unitName, stage })
   },
 

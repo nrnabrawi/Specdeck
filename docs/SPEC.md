@@ -104,7 +104,7 @@ interface FrameworkAdapter {
   deltasForSpec(root, specId): Promise<Delta[]>  // incl. archived (History tab); added M1
   searchSpecs(root, query): Promise<string[]>    // added M1 (AC-040)
   taskProgress(root, unitId): Promise<Tasks>
-  stageCommand(root, unitName, stage, agent): Command   // verified syntax per agent; throws if skill not installed
+  stageCommand(root, unitName, stage, agent, input?): Command   // verified syntax per agent; optional one-line input after the unit name; throws if skill not installed
   maintenance(root): MaintenanceInfo          // add-ons page facts + actions (M2)
   maintenanceCommand(root, actionId): Command
 }
@@ -118,6 +118,8 @@ Verified facts (probed 2026-11-16 with openspec 1.12.0, specify 1.0.7, claude 2.
 - Command confirmation: renderer previews a command, main returns a single-use token, `commands:run` runs only that command.
 - Spec Kit feature runs (verified M3, specify 1.0.7 + claude 2.1.325, real `/speckit-specify|plan|tasks|implement|converge` runs): features live in `specs/<NNN>-<name>/` (`spec.md`, `plan.md`, `tasks.md`, plus research/data-model/contracts/checklists); `.specify/feature.json` holds only the last created feature. Skills resolve the feature from it, so Specdeck passes `Feature directory: specs/<name>` as the skill argument; the agent then used `SPECIFY_FEATURE_DIRECTORY` for that feature (verified with two features). Stage is inferred from files (no status markers exist): no/unclear `spec.md` (`[NEEDS CLARIFICATION`) → specify (runs `speckit-clarify`), no `plan.md` → plan, no `tasks.md` → tasks, unchecked tasks → implement, all checked → converge. Converge leaves `tasks.md` unchanged when converged, else appends a `## Phase N: Convergence` section of unchecked tasks (moving the feature back to implement). Codex uses `.agents/skills/speckit-*`; the `$speckit-*` form is by analogy with OpenSpec and was not run.
 - Spec Kit browsing: no cross-feature specs or deltas; the Specs page lists each feature's spec/plan/tasks (ids `<feature>:<file>`), no History tab (AC-043). Extension add is not built (see BACKLOG).
+
+Wizard (M5): OpenSpec steps use structured fields and write only `proposal.md`, `specs/<cap>/spec.md`, `design.md`, `tasks.md` into an existing, non-archived `openspec/changes/<name>/` (enforced in `src/main/wizard.ts`; generated files pass the real `openspec validate`). Before the change exists, Save draft keeps the draft in app data only; "Propose with agent" runs `/openspec-propose <name> Why: …; What changes: …` (inline text verified with a real Claude run). Spec Kit documents are agent-authored, so its wizard writes no files: Specify runs `/speckit-specify <description>` (stage `create`), Plan/Tasks run `/speckit-plan|tasks Feature directory: specs/<feature> <notes>`; drafts stay in app data. "Start from an existing change" loads an OpenSpec change's files into the form (M5 fix). Files left unchanged in the form are never rewritten; replacing a file that holds content the form cannot show (extra sections, checked tasks) needs an explicit confirm.
 
 ## 8. Architecture
 Electron main process (adapters, FS watch via chokidar, CLI exec, node-pty, SQLite, tray) ⇄ typed IPC (zod-validated) ⇄ React renderer (shadcn, TanStack Query, Zustand). Renderer has no Node access (contextIsolation on). Adapters are pure-ish modules in main behind the interface; UI consumes only the interface.

@@ -13,6 +13,7 @@ import { useUI } from '@/lib/store'
 import { applyTheme } from '@/lib/theme'
 import Board from '@/pages/Board'
 import Activity from '@/pages/Activity'
+import Wizard from '@/pages/Wizard'
 import Stats from '@/pages/Stats'
 import Addons from '@/pages/Addons'
 import Dashboard from '@/pages/Dashboard'
@@ -71,6 +72,7 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="board" element={<Board />} />
               <Route path="specs" element={<Specs />} />
+              <Route path="wizard" element={<Wizard />} />
               <Route path="activity" element={<Activity />} />
               <Route path="stats" element={<Stats />} />
               <Route path="addons" element={<Addons />} />

@@ -1,3 +1,4 @@
+import type { OpenspecDraft } from './wizard'
 import type { AgentKey, AgentStatus, Delta, FrameworkId, MaintenanceInfo, Project, Run, SpecDoc, FeedItem, Stats, SpecSummary, Unit } from './types'
 
 export interface FrameworkDetection {
@@ -8,7 +9,7 @@ export interface FrameworkDetection {
 
 export type PreviewReq =
   | { kind: 'init'; path: string; framework: FrameworkId; agents: AgentKey[] }
-  | { kind: 'stage'; projectId: string; unitId: string; stage: string; agent: AgentKey }
+  | { kind: 'stage'; projectId: string; unitId: string; stage: string; agent: AgentKey; input?: string }
   | { kind: 'maintenance'; projectId: string; actionId: string }
 
 export interface Preview {
@@ -38,6 +39,9 @@ export interface IpcMap {
   'runs:resize': { arg: { runId: string; cols: number; rows: number }; res: void }
   'runs:stop': { arg: { runId: string }; res: void }
   'runs:list': { arg: { projectId: string; sinceMs?: number }; res: Run[] }
+  'wizard:load': { arg: { projectId: string }; res: unknown }
+  'wizard:save': { arg: { projectId: string; state: unknown; replace?: string[] }; res: { wrote: string[]; draftOnly: boolean; needsConfirm?: string[] } }
+  'wizard:import': { arg: { projectId: string; name: string }; res: { draft: OpenspecDraft; lossy: string[] } }
   'activity:list': { arg: { projectId: string }; res: FeedItem[] }
   'stats:get': { arg: { projectId: string; days: 14 | 30 }; res: Stats }
   'maintenance:get': { arg: { projectId: string }; res: MaintenanceInfo }
@@ -68,6 +72,9 @@ export const CHANNELS: Channel[] = [
   'runs:resize',
   'runs:stop',
   'runs:list',
+  'wizard:load',
+  'wizard:save',
+  'wizard:import',
   'activity:list',
   'stats:get',
   'maintenance:get',

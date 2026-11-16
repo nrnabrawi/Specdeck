@@ -12,7 +12,7 @@ export interface FrameworkAdapter {
   searchSpecs(root: string, query: string): Promise<string[]>
   initCommand(root: string, agents: AgentKey[]): Command
   /** Throws a user-readable Error when the stage/agent combination is not available. */
-  stageCommand(root: string, unitName: string, stage: string, agent: AgentKey): Command
+  stageCommand(root: string, unitName: string, stage: string, agent: AgentKey, input?: string): Command
   maintenance(root: string): Promise<MaintenanceInfo>
   maintenanceCommand(root: string, actionId: string): Promise<Command>
 }

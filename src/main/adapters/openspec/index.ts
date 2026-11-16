@@ -118,6 +118,9 @@ const STAGE_SKILL: Record<string, string> = {
   apply: 'openspec-apply-change'
 }
 
+/** Optional free text after the unit name (wizard); one line, so the displayed command is exactly what runs. */
+const oneLine = (s?: string) => (s?.replace(/\s+/g, ' ').trim() ? ` ${s.replace(/\s+/g, ' ').trim()}` : '')
+
 const cmd = (bin: string, args: string[], cwd: string, mode: Command['mode'], meta?: Command['meta']): Command => ({
   bin,
   args,
@@ -199,7 +202,7 @@ export const openspecAdapter: FrameworkAdapter = {
     return cmd('openspec', ['init', '--tools', agents.length ? agents.join(',') : 'none'], root, 'exec')
   },
 
-  stageCommand(root, unitName, stage, agent) {
+  stageCommand(root, unitName, stage, agent, input) {
     assertId(unitName)
     if (stage === 'archive') return cmd('openspec', ['archive', unitName, '--yes'], root, 'exec')
     const skill = STAGE_SKILL[stage]
@@ -207,7 +210,7 @@ export const openspecAdapter: FrameworkAdapter = {
     const a = AGENT[agent as AgentKey]
     if (!existsSync(join(root, ...a.skillsDir, skill, 'SKILL.md')))
       throw new Error(`${a.prefix}${skill} is not installed for ${a.label}. Run "openspec update" (Add-ons) or init with this agent.`)
-    return cmd(agent, [`${a.prefix}${skill} ${unitName}`], root, 'pty', { agent, unitId: unitName, stage })
+    return cmd(agent, [`${a.prefix}${skill} ${unitName}${oneLine(input)}`], root, 'pty', { agent, unitId: unitName, stage })
   },
 
   async maintenance(root) {
