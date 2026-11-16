@@ -4,3 +4,4 @@ dist/
 .serena/
 test-results/
 playwright-report/
+*:Zone.Identifier
