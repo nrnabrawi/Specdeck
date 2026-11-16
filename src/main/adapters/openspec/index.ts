@@ -80,6 +80,7 @@ async function readUnit(dir: string, id: string, archived: boolean, info?: Statu
     summary: proposalSummary(await readOr(join(dir, 'proposal.md'))),
     tasks,
     archived,
+    requirements: (await deltasIn(dir, id, archived)).length,
     lastModified: date ? Date.UTC(+date[1], +date[2] - 1, +date[3]) : await newestMtime(dir)
   }
 }

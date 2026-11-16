@@ -1,4 +1,4 @@
-import type { AgentKey, AgentStatus, Delta, FrameworkId, MaintenanceInfo, Project, Run, SpecDoc, SpecSummary, Unit } from './types'
+import type { AgentKey, AgentStatus, Delta, FrameworkId, MaintenanceInfo, Project, Run, SpecDoc, FeedItem, Stats, SpecSummary, Unit } from './types'
 
 export interface FrameworkDetection {
   id: FrameworkId
@@ -38,6 +38,8 @@ export interface IpcMap {
   'runs:resize': { arg: { runId: string; cols: number; rows: number }; res: void }
   'runs:stop': { arg: { runId: string }; res: void }
   'runs:list': { arg: { projectId: string; sinceMs?: number }; res: Run[] }
+  'activity:list': { arg: { projectId: string }; res: FeedItem[] }
+  'stats:get': { arg: { projectId: string; days: 14 | 30 }; res: Stats }
   'maintenance:get': { arg: { projectId: string }; res: MaintenanceInfo }
   'units:list': { arg: { projectId: string }; res: Unit[] }
   'specs:list': { arg: { projectId: string }; res: SpecSummary[] }
@@ -66,6 +68,8 @@ export const CHANNELS: Channel[] = [
   'runs:resize',
   'runs:stop',
   'runs:list',
+  'activity:list',
+  'stats:get',
   'maintenance:get',
   'units:list',
   'specs:list',

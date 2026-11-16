@@ -39,6 +39,7 @@ export function inferStage(spec: string, hasPlan: boolean, tasks: { done: number
   return tasks.total > 0 && tasks.done === tasks.total ? 'converge' : 'implement'
 }
 
+const frCount = (md: string) => (md.match(/^-\s+\*\*FR-\d+/gm) ?? []).length
 const title = (spec: string, fallback: string) =>
   /^#\s+(?:Feature Specification:\s*)?(.+)$/m.exec(spec)?.[1].trim() ?? fallback
 
@@ -55,6 +56,7 @@ async function readUnit(root: string, id: string): Promise<Unit> {
     summary: title(spec, id),
     tasks,
     archived: false,
+    requirements: frCount(spec),
     lastModified: Math.max(...mtimes)
   }
 }
@@ -96,7 +98,7 @@ export const speckitAdapter: FrameworkAdapter = {
     for (const f of await featureIds(root)) {
       for (const file of FILES) {
         const md = await readOr(join(specsDir(root), f, `${file}.md`))
-        if (md) out.push({ id: `${f}:${file}`, requirementCount: file === 'spec' ? (md.match(/^-\s+\*\*FR-\d+/gm) ?? []).length : 0 })
+        if (md) out.push({ id: `${f}:${file}`, requirementCount: file === 'spec' ? frCount(md) : 0 })
       }
     }
     return out

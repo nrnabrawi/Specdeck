@@ -41,6 +41,8 @@ export function CommandPalette() {
           <CommandItem onSelect={go('/')}>Dashboard</CommandItem>
           <CommandItem onSelect={go('/board')}>Board</CommandItem>
           <CommandItem onSelect={go('/specs')}>Specs</CommandItem>
+          <CommandItem onSelect={go('/activity')}>Activity</CommandItem>
+          <CommandItem onSelect={go('/stats')}>Stats</CommandItem>
           <CommandItem onSelect={go('/addons')}>Add-ons</CommandItem>
         </CommandGroup>
         <CommandGroup heading="Projects">

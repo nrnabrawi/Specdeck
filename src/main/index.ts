@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { app, BrowserWindow } from 'electron'
+import { Recorder } from './activity'
 import { Store } from './db'
 import { CommandService } from './commands'
 import { broadcastChanged, registerIpc } from './ipc'
@@ -23,13 +24,15 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   const store = new Store(app.getPath('userData'))
-  const watcher = new ProjectWatcher(broadcastChanged)
+  const recorder = new Recorder(store)
+  const watcher = new ProjectWatcher((id) => void recorder.record(id).then(() => broadcastChanged(id)))
   watcher.sync(store.list())
+  for (const p of store.list()) void recorder.record(p.id)
   const pty = new PtyManager(store, (channel, payload) => {
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload)
   })
   app.on('before-quit', () => pty.stopAll())
-  registerIpc(store, watcher, new CommandService(store, pty), pty)
+  registerIpc(store, watcher, new CommandService(store, pty), pty, recorder)
   createWindow()
 })
 app.on('window-all-closed', () => {

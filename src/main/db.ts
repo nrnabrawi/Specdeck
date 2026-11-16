@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
-import type { AgentKey, FrameworkId, Project, Run } from '../shared/types'
+import type { AgentKey, FrameworkId, Project, Run, UnitEvent } from '../shared/types'
 
 type Row = { id: string; path: string; name: string; framework: FrameworkId; added_at: number }
 const toProject = (r: Row): Project => ({ id: r.id, path: r.path, name: r.name, framework: r.framework, addedAt: r.added_at })
@@ -19,7 +19,11 @@ export class Store {
       create table if not exists runs (
         id text primary key, project_id text not null, agent text not null, unit_id text not null,
         stage text not null, command text not null, started_at integer not null,
-        ended_at integer, exit_code integer);`)
+        ended_at integer, exit_code integer);
+      create table if not exists events (
+        id text primary key, project_id text not null, ts integer not null, kind text not null,
+        unit_id text not null, text text not null, n integer not null default 0);
+      create index if not exists events_project_ts on events (project_id, ts);`)
     // A crash can leave runs open; close them so they are not reported as running (AC-101).
     this.db.prepare('update runs set ended_at = ? where ended_at is null').run(Date.now())
   }
@@ -97,6 +101,26 @@ export class Store {
       startedAt: r.started_at,
       endedAt: r.ended_at,
       exitCode: r.exit_code
+    }))
+  }
+
+  addEvents(projectId: string, events: Omit<UnitEvent, 'id' | 'projectId'>[]): void {
+    const ins = this.db.prepare('insert into events (id, project_id, ts, kind, unit_id, text, n) values (?, ?, ?, ?, ?, ?, ?)')
+    this.db.transaction(() => {
+      for (const e of events) ins.run(randomUUID(), projectId, e.ts, e.kind, e.unitId, e.text, e.n)
+    })()
+  }
+
+  listEvents(projectId: string): UnitEvent[] {
+    type E = { id: string; project_id: string; ts: number; kind: UnitEvent['kind']; unit_id: string; text: string; n: number }
+    return (this.db.prepare('select * from events where project_id = ? order by ts desc').all(projectId) as E[]).map((e) => ({
+      id: e.id,
+      projectId: e.project_id,
+      ts: e.ts,
+      kind: e.kind,
+      unitId: e.unit_id,
+      text: e.text,
+      n: e.n
     }))
   }
 }

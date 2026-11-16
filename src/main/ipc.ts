@@ -7,6 +7,7 @@ import { detectAll, getAdapter } from './adapters'
 import type { Store } from './db'
 import type { ProjectWatcher } from './watcher'
 import type { CommandService } from './commands'
+import { buildFeed, computeStats, type Recorder } from './activity'
 import type { PtyManager } from './pty'
 
 const fw = z.enum(['openspec', 'speckit'])
@@ -21,7 +22,7 @@ const dirPath = z.string().min(1).refine((p) => {
   }
 }, 'Not a directory')
 
-export function registerIpc(store: Store, watcher: ProjectWatcher, commands: CommandService, pty: PtyManager): void {
+export function registerIpc(store: Store, watcher: ProjectWatcher, commands: CommandService, pty: PtyManager, recorder: Recorder): void {
   const handle = <C extends Channel>(
     channel: C,
     schema: z.ZodType<IpcMap[C]['arg']>,
@@ -39,7 +40,7 @@ export function registerIpc(store: Store, watcher: ProjectWatcher, commands: Com
   handle('projects:add', z.object({ path: dirPath, name: z.string().min(1).max(100), framework: fw }), (a) => {
     const p = store.add(a.path, a.name, a.framework)
     watcher.sync(store.list())
-    return p
+    return recorder.record(p.id).then(() => p) // baseline snapshot
   })
   handle('projects:setFramework', z.object({ id, framework: fw }), async (a) => {
     const p = store.setFramework(a.id, a.framework)
@@ -75,6 +76,14 @@ export function registerIpc(store: Store, watcher: ProjectWatcher, commands: Com
   handle('runs:resize', z.object({ runId: id, cols: z.number().int().min(10).max(500), rows: z.number().int().min(2).max(200) }), (a) => pty.resize(a.runId, a.cols, a.rows))
   handle('runs:stop', z.object({ runId: id }), (a) => pty.stop(a.runId))
   handle('runs:list', z.object({ projectId: id, sinceMs: z.number().int().min(0).optional() }), (a) => store.listRuns(a.projectId, a.sinceMs))
+  handle('activity:list', z.object({ projectId: id }), async (a) => {
+    const { p, a: ad } = proj(a.projectId)
+    return buildFeed(store.listEvents(p.id), store.listRuns(p.id), await ad.listUnits(p.path))
+  })
+  handle('stats:get', z.object({ projectId: id, days: z.union([z.literal(14), z.literal(30)]) }), async (a) => {
+    const { p, a: ad } = proj(a.projectId)
+    return computeStats(store.listEvents(p.id), store.listRuns(p.id), await ad.listUnits(p.path), a.days, Date.now())
+  })
   handle('maintenance:get', z.object({ projectId: id }), (a) => proj(a.projectId).a.maintenance(proj(a.projectId).p.path))
   handle('units:list', z.object({ projectId: id }), (a) => proj(a.projectId).a.listUnits(proj(a.projectId).p.path))
   handle('specs:list', z.object({ projectId: id }), (a) => proj(a.projectId).a.listSpecs(proj(a.projectId).p.path))
