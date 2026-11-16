@@ -14,7 +14,7 @@ const w = (root: string, rel: string, body: string) => {
 /** Builds a repo with the real OpenSpec CLI (init + archive); change artifacts follow OpenSpec's documented format. */
 export function makeOpenspecRepo(): string {
   const root = mkdtempSync(join(tmpdir(), 'specdeck-os-'))
-  cli(root, 'init', '--tools', 'claude')
+  cli(root, 'init', '--tools', 'claude,codex')
 
   mkdirSync(join(root, 'openspec/changes/explore-me'), { recursive: true })
   w(root, 'openspec/changes/propose-me/proposal.md', '## Why\nNeed it.\n\n## What Changes\n- thing\n')

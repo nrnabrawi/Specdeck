@@ -1,7 +1,9 @@
 import { join } from 'node:path'
 import { app, BrowserWindow } from 'electron'
 import { Store } from './db'
+import { CommandService } from './commands'
 import { broadcastChanged, registerIpc } from './ipc'
+import { PtyManager } from './pty'
 import { ProjectWatcher } from './watcher'
 
 function createWindow(): void {
@@ -23,7 +25,11 @@ app.whenReady().then(() => {
   const store = new Store(app.getPath('userData'))
   const watcher = new ProjectWatcher(broadcastChanged)
   watcher.sync(store.list())
-  registerIpc(store, watcher)
+  const pty = new PtyManager(store, (channel, payload) => {
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload)
+  })
+  app.on('before-quit', () => pty.stopAll())
+  registerIpc(store, watcher, new CommandService(store, pty), pty)
   createWindow()
 })
 app.on('window-all-closed', () => {

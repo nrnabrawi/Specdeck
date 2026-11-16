@@ -63,9 +63,41 @@ export interface DetectResult {
   evidence: string
 }
 
+export type AgentKey = 'claude' | 'codex'
+
 export interface AgentStatus {
-  key: 'claude' | 'codex'
+  key: string
   label: string
   detected: boolean
+  launchable: boolean // only Claude Code and Codex are launchable in v1 (AC-081)
+  enabled: boolean
   version?: string
+}
+
+/** A command Specdeck may run. `display` is exactly what the user confirms (AC-003). */
+export interface Command {
+  bin: string
+  args: string[]
+  cwd: string
+  display: string
+  mode: 'exec' | 'pty'
+  meta?: { agent: AgentKey; unitId: string; stage: string }
+}
+
+export interface Run {
+  id: string
+  projectId: string
+  agent: AgentKey
+  unitId: string
+  stage: string
+  command: string
+  startedAt: number
+  endedAt: number | null
+  exitCode: number | null
+}
+
+export interface MaintenanceInfo {
+  cli: { installed: boolean; version?: string }
+  facts: { label: string; value: string }[]
+  actions: { id: string; label: string; description: string }[]
 }
