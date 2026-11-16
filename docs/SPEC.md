@@ -104,8 +104,9 @@ interface FrameworkAdapter {
   deltasForSpec(root, specId): Promise<Delta[]>  // incl. archived (History tab); added M1
   searchSpecs(root, query): Promise<string[]>    // added M1 (AC-040)
   taskProgress(root, unitId): Promise<Tasks>
-  stageCommand(unit, stage, agent): Command   // verified syntax per agent
-  maintenanceActions(): Action[]              // add-ons page
+  stageCommand(root, unitName, stage, agent): Command   // verified syntax per agent; throws if skill not installed
+  maintenance(root): MaintenanceInfo          // add-ons page facts + actions (M2)
+  maintenanceCommand(root, actionId): Command
 }
 type Command = { bin: string; args: string[]; cwd: string; display: string }
 ```
@@ -113,6 +114,8 @@ Verified facts (probed 2026-11-16 with openspec 1.12.0, specify 1.0.7, claude 2.
 - OpenSpec init creates `openspec/{config.yaml,specs/,changes/archive/}` plus agent skills (`.claude/skills/openspec-*`, `.agents/skills/openspec-*` for Codex). CLI gives JSON: `openspec list --json`, `list --specs --json`, `status --change <n>|--all --json`, `show <n> --json --deltas-only`, `validate <n> --json`. Adapter prefers CLI JSON, falls back to parsing files (tasks `- [x]`).
 - OpenSpec agent syntax **differs from REFERENCE**: with `delivery: skills` it is `/openspec-propose` (Claude) and `$openspec-propose` (Codex); `/opsx:*` applies to other profiles/deliveries. Adapter reads `openspec config list` (profile, delivery, workflows) and installed skill folders; never hardcodes.
 - Spec Kit: `.specify/` (with `init-options.json`, `integration.json`, `memory/constitution.md`, `templates/`) is created by init; **no feature folder until `/speckit-specify`**. Skills are `.claude/skills/speckit-{constitution,specify,clarify,plan,tasks,analyze,checklist,implement,converge,taskstoissues}`; invoke separator stored in `integration.json` (`"-"` for claude). Per-feature file names `spec.md`, `plan.md`, `tasks.md` (from `common.sh`).
+- Agent launch (verified M2, real runs): `claude '/openspec-propose <name>'` and `codex '$openspec-explore <name>'` start interactive sessions in a PTY and run the skill. Skill names: `openspec-{explore,propose,apply-change,archive-change}`; Claude reads `.claude/skills`, Codex `.agents/skills`. `/opsx:*` (commands delivery) is not supported in v1; the adapter reports the skill as not installed. Archive uses the CLI (`openspec archive <name> --yes`), not an agent.
+- Command confirmation: renderer previews a command, main returns a single-use token, `commands:run` runs only that command.
 - Still to verify in M3 against a real feature run: feature directory location/naming, converge status markers, and non-interactive agent launch lines.
 
 ## 8. Architecture
