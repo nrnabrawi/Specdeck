@@ -64,7 +64,7 @@ export function registerIpc(store: Store, watcher: ProjectWatcher, commands: Com
     'commands:preview',
     z.discriminatedUnion('kind', [
       z.object({ kind: z.literal('init'), path: dirPath, framework: fw, agents: z.array(agent).max(2) }),
-      z.object({ kind: z.literal('stage'), projectId: id, unitId: unitId, stage: z.enum(['explore', 'propose', 'apply', 'archive']), agent }),
+      z.object({ kind: z.literal('stage'), projectId: id, unitId: unitId, stage: z.string().regex(/^[a-z]+$/).max(20), agent }),
       z.object({ kind: z.literal('maintenance'), projectId: id, actionId: z.string().min(1).max(50) })
     ]),
     (a) => commands.preview(a)

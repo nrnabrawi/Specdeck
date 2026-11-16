@@ -1,10 +1,10 @@
 import type { FrameworkId } from '../../shared/types'
 import { openspecAdapter } from './openspec'
+import { speckitAdapter } from './speckit'
 import type { FrameworkAdapter } from './types'
 
 export function getAdapter(id: FrameworkId): FrameworkAdapter {
-  if (id === 'openspec') return openspecAdapter
-  throw new Error('UNSUPPORTED_FRAMEWORK: Spec Kit support arrives in milestone M3')
+  return id === 'openspec' ? openspecAdapter : speckitAdapter
 }
 
 /** Marker-folder detection for both frameworks (AC-010/011). */

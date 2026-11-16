@@ -24,7 +24,9 @@ export class ProjectWatcher {
         clearTimeout(timer)
         timer = setTimeout(() => this.onChange(p.id), 250)
       }
-      const w = watch(join(p.path, FRAMEWORKS[p.framework].marker), { ignoreInitial: true, depth: 8 })
+      // Spec Kit keeps features in specs/, outside its .specify/ marker folder
+      const paths = [FRAMEWORKS[p.framework].marker, ...(p.framework === 'speckit' ? ['specs'] : [])].map((m) => join(p.path, m))
+      const w = watch(paths, { ignoreInitial: true, depth: 8 })
       w.on('all', fire).on('error', () => undefined)
       this.watchers.set(p.id, w)
     }

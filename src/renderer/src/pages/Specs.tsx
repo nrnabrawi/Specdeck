@@ -43,7 +43,7 @@ function counts(ds: Delta[]) {
   return `${c('ADDED')} added · ${c('MODIFIED')} modified · ${c('REMOVED')} removed`
 }
 
-function SpecView({ projectId, id }: { projectId: string; id: string }) {
+function SpecView({ projectId, id, deltaView }: { projectId: string; id: string; deltaView: boolean }) {
   const spec = useSpec(projectId, id)
   const deltas = useSpecDeltas(projectId, id)
   const units = useUnits(projectId)
@@ -52,7 +52,7 @@ function SpecView({ projectId, id }: { projectId: string; id: string }) {
   const touching = [...new Set(pending.map((d) => d.unitId))]
 
   return (
-    <div className="grid grid-cols-[1fr_16rem] gap-6">
+    <div className={cn('grid gap-6', deltaView && 'grid-cols-[1fr_16rem]')}>
       <div>
         <QueryState q={spec}>
           <div className="mb-4">
@@ -62,8 +62,8 @@ function SpecView({ projectId, id }: { projectId: string; id: string }) {
           <Tabs defaultValue="spec" key={id}>
             <TabsList>
               <TabsTrigger value="spec">Spec</TabsTrigger>
-              <TabsTrigger value="deltas">Deltas · {pending.length}</TabsTrigger>
-              <TabsTrigger value="history">History · {history.length}</TabsTrigger>
+              {deltaView && <TabsTrigger value="deltas">Deltas · {pending.length}</TabsTrigger>}
+              {deltaView && <TabsTrigger value="history">History · {history.length}</TabsTrigger>}
             </TabsList>
             <TabsContent value="spec">
               <Markdown text={spec.data?.raw ?? ''} />
@@ -86,7 +86,7 @@ function SpecView({ projectId, id }: { projectId: string; id: string }) {
           </Tabs>
         </QueryState>
       </div>
-      <aside>
+      {deltaView && <aside>
         <h3 className="mb-3 text-sm font-semibold">Changes touching this spec</h3>
         {touching.length === 0 && <p className="text-sm text-muted-foreground">None.</p>}
         <div className="flex flex-col gap-2">
@@ -99,7 +99,7 @@ function SpecView({ projectId, id }: { projectId: string; id: string }) {
             </Card>
           ))}
         </div>
-      </aside>
+      </aside>}
     </div>
   )
 }
@@ -138,11 +138,12 @@ export default function Specs() {
     [specs.data, ql, hits.data]
   )
   const unitList = (units.data ?? []).filter((u) => !ql || u.name.toLowerCase().includes(ql))
+  const deltaView = project!.framework === 'openspec' // Spec Kit has no deltas or archive (AC-043)
   const current = sel ?? (specs.data?.[0] ? { kind: 'spec' as const, id: specs.data[0].id } : null)
 
   return (
     <>
-      <PageHeader crumb={`${project!.name} / Specs`} title="Specs & deltas" actions={<Input placeholder="Search specs…" aria-label="Search specs" value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
+      <PageHeader crumb={`${project!.name} / Specs`} title={deltaView ? 'Specs & deltas' : 'Feature specs'} actions={<Input placeholder="Search specs…" aria-label="Search specs" value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
       <QueryState q={specs.error ? specs : units}>
         <div className="grid grid-cols-[15rem_1fr] gap-6">
           <ScrollArea className="h-[calc(100vh-11rem)] rounded-lg border p-2">
@@ -155,7 +156,7 @@ export default function Specs() {
               ))}
               {specList.length === 0 && <span className="px-3 py-1 text-sm text-muted-foreground">No specs</span>}
             </Group>
-            <Group title="changes">
+            {deltaView && <><Group title="changes">
               {unitList.filter((u) => !u.archived).map((u) => (
                 <Leaf key={u.id} active={current?.kind === 'unit' && current.id === u.id} onClick={() => setSel({ kind: 'unit', id: u.id })}>
                   {u.name}
@@ -168,11 +169,11 @@ export default function Specs() {
                   {u.id}
                 </Leaf>
               ))}
-            </Group>
+            </Group></>}
           </ScrollArea>
           <div className="min-w-0">
             {!current && <p className="text-sm text-muted-foreground">Select a spec or change.</p>}
-            {current?.kind === 'spec' && <SpecView projectId={project!.id} id={current.id} />}
+            {current?.kind === 'spec' && <SpecView projectId={project!.id} id={current.id} deltaView={deltaView} />}
             {current?.kind === 'unit' && <UnitView projectId={project!.id} id={current.id} />}
           </div>
         </div>

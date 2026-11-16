@@ -16,22 +16,23 @@ import { unitWhen } from '@/lib/format'
 import { useActiveProject, useAgents, useFrameworkMeta, useRunList, useUnits } from '@/lib/queries'
 import { useRuns } from '@/lib/runs'
 import { cn } from '@/lib/utils'
+import type { FrameworkMeta } from '@shared/frameworks'
 import type { Run, Unit } from '@shared/types'
 
-type StageAction = { stage: 'explore' | 'propose' | 'apply' | 'archive'; label: string }
+type StageAction = { stage: string; label: string }
 
-/** Primary action per unit (AC-031): the stage command that moves it forward. */
-function primaryAction(u: Unit): StageAction | null {
+/** Primary action per unit (AC-031): the stage command that moves it forward. OpenSpec units with all tasks done archive. */
+function primaryAction(u: Unit, meta: FrameworkMeta): StageAction | null {
   if (u.archived) return null
-  if (u.stage === 'explore') return { stage: 'explore', label: 'Explore with agent' }
-  if (u.stage === 'propose') return { stage: 'propose', label: 'Continue proposal' }
-  if (u.tasks.total > 0 && u.tasks.done === u.tasks.total) return { stage: 'archive', label: 'Archive' }
-  return { stage: 'apply', label: u.tasks.done ? 'Continue apply' : 'Apply with agent' }
+  const all = u.tasks.total > 0 && u.tasks.done === u.tasks.total
+  const stage = meta.stages.some((s) => s.id === 'archive') && all && u.stage === 'apply' ? 'archive' : u.stage
+  const label = meta.actions[stage]?.[u.tasks.done ? 1 : 0]
+  return label ? { stage, label } : null
 }
 
-function UnitCard({ u, lastAgent, busy, onAction }: { u: Unit; lastAgent?: string; busy: boolean; onAction: (u: Unit, s: StageAction['stage']) => void }) {
+function UnitCard({ u, meta, lastAgent, busy, onAction }: { u: Unit; meta: FrameworkMeta; lastAgent?: string; busy: boolean; onAction: (u: Unit, s: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: u.id, data: { unit: u }, disabled: u.archived })
-  const act = primaryAction(u)
+  const act = primaryAction(u, meta)
   return (
     <Card
       ref={setNodeRef}
@@ -46,7 +47,7 @@ function UnitCard({ u, lastAgent, busy, onAction }: { u: Unit; lastAgent?: strin
         {u.tasks.items.slice(0, 2).map((t, i) => (
           <label key={i} className="flex items-center gap-2 text-sm">
             <Checkbox checked={t.done} disabled aria-label={t.text} />
-            <span className={t.done ? 'text-muted-foreground line-through' : ''}>{t.text}</span>
+            <span className={cn('min-w-0 truncate', t.done && 'text-muted-foreground line-through')}>{t.text}</span>
           </label>
         ))}
         <TaskProgress done={u.tasks.done} total={u.tasks.total} />
@@ -99,7 +100,7 @@ export default function Board() {
     return r ? (r.agent === 'claude' ? 'Claude Code' : 'Codex') : undefined
   }
 
-  const act = (u: Unit, stage: StageAction['stage']) => {
+  const act = (u: Unit, stage: string) => {
     if (stage === 'archive' && !(u.tasks.total > 0 && u.tasks.done === u.tasks.total)) {
       toast.error('Finish all tasks before archiving.')
       return
@@ -114,7 +115,7 @@ export default function Board() {
     const target = e.over?.id as string | undefined
     if (!u || !target || target === u.stage) return
     if (busy) return void toast.error('A run is already active in this project.')
-    act(u, target as StageAction['stage'])
+    act(u, target)
   }
 
   return (
@@ -160,7 +161,7 @@ export default function Board() {
                 return (
                   <Column key={s.id} id={s.id} label={s.label} count={col.length}>
                     {col.map((u) => (
-                      <UnitCard key={u.id} u={u} lastAgent={agentLabel(u)} busy={busy} onAction={act} />
+                      <UnitCard key={u.id} u={u} meta={meta} lastAgent={agentLabel(u)} busy={busy} onAction={act} />
                     ))}
                   </Column>
                 )
@@ -181,7 +182,7 @@ export default function Board() {
             </TableHeader>
             <TableBody>
               {rows.map((u) => {
-                const a = primaryAction(u)
+                const a = primaryAction(u, meta)
                 return (
                   <TableRow key={u.id}>
                     <TableCell className="font-mono">{u.name}</TableCell>
