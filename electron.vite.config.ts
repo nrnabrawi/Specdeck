@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: { build: { rollupOptions: { external: ['node-pty', 'better-sqlite3'] } } },
-  preload: {},
+  preload: { build: { rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].cjs' } } } },
   renderer: {
     resolve: { alias: { '@': resolve('src/renderer/src') } },
     plugins: [react(), tailwindcss()]
