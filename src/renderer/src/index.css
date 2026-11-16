@@ -1,3 +1,7 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -8,6 +12,8 @@
   --foreground: #09090b;
   --card: #ffffff;
   --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
   --muted: #f4f4f5;
   --muted-foreground: #71717a;
   --border: #e4e4e7;
@@ -33,6 +39,8 @@
   --foreground: #fafafa;
   --card: #0f0f11;
   --card-foreground: #fafafa;
+  --popover: #0f0f11;
+  --popover-foreground: #fafafa;
   --muted: #27272a;
   --muted-foreground: #a1a1aa;
   --border: #27272a;
@@ -57,6 +65,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
