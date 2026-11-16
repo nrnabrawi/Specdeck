@@ -87,7 +87,7 @@ Cross-cutting
 - `Spec {id, path, requirements[]}`; `Delta {spec, op: ADDED|MODIFIED|REMOVED|RENAMED, requirement, scenarios[]}`
 - `Agent {key:'claude'|'codex', binPath?, version?, detected, enabled}`
 - `Run {id, projectId, agent, unitId?, stage, command, startedAt, endedAt?, exitCode?}` (persisted)
-- `Event {id, projectId, ts, kind, unitId?, text}` (persisted for Specdeck-observed; file-derived events computed)
+- `Event {id, projectId, ts, kind: created|tasks|done|archived, unitId, text, n}` (persisted for Specdeck-observed; `n` = tasks completed for kind `tasks`; file-derived archive events and run events are computed, runs stay in `Run`). Recorded by diffing unit snapshots on each file change (and at startup), so changes made while Specdeck was closed are stamped when it next looks. Cycle time = first seen → all tasks done; spec coverage = share of units with ≥1 requirement/FR; agent success = finished runs exiting 0 (decided at M4).
 Persistence: SQLite in app-data dir (Run, Event, Project, settings). Repo files are never the source of Specdeck state.
 
 ## 7. Framework adapter interface

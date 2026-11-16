@@ -97,3 +97,19 @@ export function useMaintenance(projectId?: string) {
     retry: false
   })
 }
+
+export function useActivity(projectId?: string) {
+  return useQuery({
+    queryKey: ['p', projectId, 'activity'],
+    enabled: !!projectId,
+    queryFn: () => api().invoke('activity:list', { projectId: projectId! })
+  })
+}
+
+export function useStats(projectId: string | undefined, days: 14 | 30) {
+  return useQuery({
+    queryKey: ['p', projectId, 'stats', days],
+    enabled: !!projectId,
+    queryFn: () => api().invoke('stats:get', { projectId: projectId!, days })
+  })
+}

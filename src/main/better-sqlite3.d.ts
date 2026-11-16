@@ -9,5 +9,6 @@ declare module 'better-sqlite3' {
     constructor(path: string)
     exec(sql: string): this
     prepare(sql: string): Statement
+    transaction<T extends () => void>(fn: T): T
   }
 }

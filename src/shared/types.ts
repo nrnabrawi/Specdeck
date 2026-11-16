@@ -20,6 +20,7 @@ export interface Unit {
   summary: string
   tasks: { done: number; total: number; items: TaskItem[] }
   archived: boolean
+  requirements: number // requirements/FRs in the unit's spec content (0 = none yet)
   lastModified: number // epoch ms
 }
 
@@ -100,4 +101,36 @@ export interface MaintenanceInfo {
   cli: { installed: boolean; version?: string }
   facts: { label: string; value: string }[]
   actions: { id: string; label: string; description: string }[]
+}
+
+// Specdeck-observed event (SPEC §6); `n` = tasks completed for kind 'tasks'.
+export type EventKind = 'created' | 'tasks' | 'done' | 'archived'
+export interface UnitEvent {
+  id: string
+  projectId: string
+  ts: number
+  kind: EventKind
+  unitId: string
+  text: string
+  n: number
+}
+
+export type FeedKind = 'proposal' | 'tasks' | 'run' | 'archive'
+export interface FeedItem {
+  id: string
+  ts: number
+  kind: FeedKind
+  unitId: string
+  text: string
+  agent?: AgentKey
+  source: 'recorded' | 'files'
+}
+
+export interface Stats {
+  windowStart: number | null // earliest recorded event/run, or null when nothing recorded
+  cycle: { medianMs: number | null; points: { ts: number; hours: number; unitId: string }[] }
+  tasksDaily: { day: string; n: number }[] // last `days` days, oldest first
+  tasksWeekly: { week: string; n: number }[] // last 8 weeks, oldest first (week = Monday, UTC)
+  coverage: { withSpec: number; total: number } | null
+  agents: { agent: AgentKey; runs: number; finished: number; succeeded: number; medianMs: number | null }[]
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronsUpDown, LayoutDashboard, Columns3, FileText, Moon, Sun, Plus, Plug } from 'lucide-react'
+import { Check, ChevronsUpDown, LayoutDashboard, Columns3, FileText, Moon, Sun, Plus, Plug, Activity as ActivityIcon, BarChart3 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Kbd } from '@/components/ui/kbd'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,8 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/board', label: 'Board', icon: Columns3 },
   { to: '/specs', label: 'Specs', icon: FileText },
+  { to: '/activity', label: 'Activity', icon: ActivityIcon },
+  { to: '/stats', label: 'Stats', icon: BarChart3 },
   { to: '/addons', label: 'Add-ons', icon: Plug }
 ]
 
