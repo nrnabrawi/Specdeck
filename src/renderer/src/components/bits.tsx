@@ -24,7 +24,7 @@ export function StageBadge({ id, label }: { id: string; label: string }) {
 export function TaskProgress({ done, total }: { done: number; total: number }) {
   return (
     <div className="flex items-center gap-3">
-      <Progress value={total ? (done / total) * 100 : 0} className="h-1.5 flex-1" />
+      <Progress aria-label="Task progress" value={total ? (done / total) * 100 : 0} className="h-1.5 flex-1" />
       <span className="w-10 text-right text-xs text-muted-foreground tabular-nums">{total ? `${done}/${total}` : '—'}</span>
     </div>
   )

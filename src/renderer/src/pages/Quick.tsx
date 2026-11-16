@@ -104,7 +104,7 @@ export default function Quick() {
             </div>
             <div className="mt-2 truncate font-mono text-base font-semibold">{current.name}</div>
             <div className="mt-3 flex items-center gap-3">
-              <Progress value={current.tasks.total ? (current.tasks.done / current.tasks.total) * 100 : 0} className="h-1.5 flex-1" />
+              <Progress aria-label="Task progress" value={current.tasks.total ? (current.tasks.done / current.tasks.total) * 100 : 0} className="h-1.5 flex-1" />
               <span className="text-xs text-muted-foreground tabular-nums">{current.tasks.total ? `${current.tasks.done}/${current.tasks.total}` : '—'}</span>
             </div>
             {next && (

@@ -44,8 +44,8 @@ export function Sidebar() {
   return (
     <aside className="flex w-62 shrink-0 flex-col gap-4 border-r bg-sidebar p-3">
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg border bg-card p-2 text-left" aria-label="Switch project">
-          <span className="grid size-9 place-items-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+        <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg border bg-card p-2 text-left">
+          <span aria-hidden className="grid size-9 place-items-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
             {project ? initials(project.name) : 'S'}
           </span>
           <span className="min-w-0 flex-1">
