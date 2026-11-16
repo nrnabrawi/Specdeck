@@ -3,5 +3,5 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   resolve: { alias: { '@': resolve('src/renderer/src') } },
-  test: { include: ['src/**/*.test.ts'] }
+  test: { include: ['src/**/*.test.ts', 'test/**/*.test.ts'], testTimeout: 30000 }
 })
