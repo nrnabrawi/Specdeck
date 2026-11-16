@@ -26,6 +26,7 @@ Versions are the latest on npm as of 2026-11-16 (`npm view`); exact-pin in `pack
 | Vitest | 5.1.0 | Unit/adapter tests |
 | @testing-library/react | 16.3.3 | Component tests |
 | Playwright | 1.65.1 | Electron e2e smoke |
+| @axe-core/playwright | 4.14.0 | AC-004 WCAG scan (axe-core run in-page; Electron cannot open the extra page AxeBuilder needs) |
 | ESLint | 10.15.0 | Lint |
 | typescript-eslint | 8.72.2 | TS lint rules |
 | @vitejs/plugin-react | 6.3.0 | React in Vite |
