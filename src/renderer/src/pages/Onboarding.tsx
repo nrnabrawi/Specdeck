@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAgents, useProjects } from '@/lib/queries'
+import { useRuns } from '@/lib/runs'
 import { useUI } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { FRAMEWORKS } from '@shared/frameworks'
@@ -29,6 +30,7 @@ export default function Onboarding() {
   const [fw, setFw] = useState<FrameworkId | null>(null)
   const [name, setName] = useState('')
   const [err, setErr] = useState('')
+  const askToRun = useRuns((s) => s.askToRun)
 
   const pick = async () => {
     setErr('')
@@ -44,6 +46,15 @@ export default function Onboarding() {
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e))
     }
+  }
+
+  // AC-012: no marker found: offer the framework's init command, confirmed first.
+  const runInit = () => {
+    if (!path || fw !== 'openspec') return
+    const tools = (agents.data ?? []).filter((a) => a.launchable && a.detected).map((a) => a.key as 'claude' | 'codex')
+    void askToRun({ kind: 'init', path, framework: fw, agents: tools }, `Initialise ${FRAMEWORKS[fw].label}`, undefined, async () => {
+      setDet(await window.specdeck.invoke('projects:detect', { path }))
+    })
   }
 
   const finish = async () => {
@@ -121,7 +132,9 @@ export default function Onboarding() {
                 <Alert className="mt-4">
                   <TriangleAlert />
                   <AlertTitle>No framework found in this folder</AlertTitle>
-                  <AlertDescription>Pick one to use. Initialising it from Specdeck is not available yet; run the init command yourself.</AlertDescription>
+                  <AlertDescription>
+                    Pick one to use. OpenSpec can be initialised from here; for Spec Kit run <code className="font-mono">specify init</code> yourself.
+                  </AlertDescription>
                 </Alert>
               )}
               <div className="mt-4 grid grid-cols-2 gap-4" role="radiogroup" aria-label="Framework">
@@ -153,7 +166,12 @@ export default function Onboarding() {
               </div>
             </>
           )}
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-end gap-2">
+            {path && found.length === 0 && fw === 'openspec' && (
+              <Button variant="outline" onClick={runInit}>
+                Run openspec init
+              </Button>
+            )}
             <Button disabled={!path || !fw} onClick={() => setStep(1)}>
               Continue{meta ? ` with ${meta.label}` : ''}
             </Button>

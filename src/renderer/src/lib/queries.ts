@@ -80,3 +80,20 @@ export function useSpecSearch(projectId?: string, query = '') {
 export function useAgents() {
   return useQuery({ queryKey: ['agents'], queryFn: () => api().invoke('agents:detect'), staleTime: 60_000 })
 }
+
+export function useRunList(projectId?: string, sinceMs?: number) {
+  return useQuery({
+    queryKey: ['runs', projectId, sinceMs ?? 0],
+    enabled: !!projectId,
+    queryFn: () => window.specdeck.invoke('runs:list', { projectId: projectId!, sinceMs })
+  })
+}
+
+export function useMaintenance(projectId?: string) {
+  return useQuery({
+    queryKey: ['p', projectId, 'maintenance'],
+    enabled: !!projectId,
+    queryFn: () => window.specdeck.invoke('maintenance:get', { projectId: projectId! }),
+    retry: false
+  })
+}

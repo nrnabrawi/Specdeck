@@ -5,11 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { CommandPalette } from '@/components/CommandPalette'
+import { CommandConfirm } from '@/components/CommandConfirm'
 import { Sidebar } from '@/components/Sidebar'
+import { TerminalDock } from '@/components/TerminalDock'
 import { useActiveProject } from '@/lib/queries'
 import { useUI } from '@/lib/store'
 import { applyTheme } from '@/lib/theme'
 import Board from '@/pages/Board'
+import Addons from '@/pages/Addons'
 import Dashboard from '@/pages/Dashboard'
 import Onboarding from '@/pages/Onboarding'
 import Specs from '@/pages/Specs'
@@ -30,7 +33,8 @@ function Shell() {
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <main className="min-w-0 flex-1 overflow-auto px-8 py-6">
+      <div className="flex min-w-0 flex-1 flex-col">
+      <main className="min-h-0 flex-1 overflow-auto px-8 py-6">
         {project ? (
           <Outlet />
         ) : (
@@ -45,6 +49,8 @@ function Shell() {
           </div>
         )}
       </main>
+      <TerminalDock />
+      </div>
       <CommandPalette />
     </div>
   )
@@ -63,9 +69,11 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="board" element={<Board />} />
               <Route path="specs" element={<Specs />} />
+              <Route path="addons" element={<Addons />} />
             </Route>
           </Routes>
         </HashRouter>
+        <CommandConfirm />
         <Toaster theme={theme} />
       </TooltipProvider>
     </QueryClientProvider>

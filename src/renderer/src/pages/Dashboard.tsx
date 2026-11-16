@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { PageHeader, QueryState, StageBadge, TaskProgress } from '@/components/bits'
 import { unitWhen } from '@/lib/format'
-import { useActiveProject, useFrameworkMeta, useSpecs, useUnits } from '@/lib/queries'
+import { useActiveProject, useFrameworkMeta, useRunList, useSpecs, useUnits } from '@/lib/queries'
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub: string }) {
   return (
@@ -23,6 +23,13 @@ export default function Dashboard() {
   const meta = useFrameworkMeta(project)!
   const units = useUnits(project?.id)
   const specs = useSpecs(project?.id)
+  const runs = useRunList(project?.id)
+  const weekAgo = Date.now() - 7 * 86_400_000
+  const weekRuns = (runs.data ?? []).filter((r) => r.startedAt >= weekAgo).length
+  const lastAgent = (name: string) => {
+    const r = (runs.data ?? []).find((x) => x.unitId === name)
+    return r ? (r.agent === 'claude' ? 'Claude Code' : 'Codex') : '—'
+  }
   const all = units.data ?? []
   const active = all.filter((u) => !u.archived)
   const done = active.reduce((n, u) => n + u.tasks.done, 0)
@@ -48,7 +55,7 @@ export default function Dashboard() {
           <Stat label={`Active ${meta.unitName}s`} value={active.length} sub={`${ready} ready to archive`} />
           <Stat label="Tasks done" value={`${done} / ${total}`} sub={total ? `${Math.round((done / total) * 100)}% complete` : 'No tasks yet'} />
           <Stat label="Specs" value={specs.data?.length ?? 0} sub={`${reqs} ${reqs === 1 ? 'requirement' : 'requirements'}`} />
-          <Stat label="Agent runs" value={0} sub="No runs recorded yet" />
+          <Stat label="Agent runs" value={weekRuns} sub={weekRuns ? 'this week' : 'No runs this week'} />
         </div>
         <div className="mt-4 grid grid-cols-[2fr_1fr] gap-4">
           <Card>
@@ -79,7 +86,7 @@ export default function Dashboard() {
                         <TableCell>
                           <TaskProgress done={u.tasks.done} total={u.tasks.total} />
                         </TableCell>
-                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">{lastAgent(u.name)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

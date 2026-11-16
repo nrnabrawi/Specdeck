@@ -1,10 +1,24 @@
-import type { AgentStatus, Delta, FrameworkId, Project, SpecDoc, SpecSummary, Unit } from './types'
+import type { AgentKey, AgentStatus, Delta, FrameworkId, MaintenanceInfo, Project, Run, SpecDoc, SpecSummary, Unit } from './types'
 
 export interface FrameworkDetection {
   id: FrameworkId
   found: boolean
   evidence: string
 }
+
+export type PreviewReq =
+  | { kind: 'init'; path: string; framework: FrameworkId; agents: AgentKey[] }
+  | { kind: 'stage'; projectId: string; unitId: string; stage: string; agent: AgentKey }
+  | { kind: 'maintenance'; projectId: string; actionId: string }
+
+export interface Preview {
+  token: string
+  display: string
+  cwd: string
+  mode: 'exec' | 'pty'
+}
+
+export type RunResult = { mode: 'exec'; ok: boolean; exitCode: number | null; output: string } | { mode: 'pty'; runId: string }
 
 export interface IpcMap {
   'projects:list': { arg: void; res: Project[] }
@@ -16,6 +30,15 @@ export interface IpcMap {
   'active:get': { arg: void; res: string | null }
   'active:set': { arg: { id: string | null }; res: void }
   'agents:detect': { arg: void; res: AgentStatus[] }
+  'agents:setEnabled': { arg: { key: AgentKey; enabled: boolean }; res: void }
+  'commands:preview': { arg: PreviewReq; res: Preview }
+  'commands:run': { arg: { token: string }; res: RunResult }
+  'runs:attach': { arg: { projectId: string }; res: { run: Run; buffer: string } | null }
+  'runs:write': { arg: { runId: string; data: string }; res: void }
+  'runs:resize': { arg: { runId: string; cols: number; rows: number }; res: void }
+  'runs:stop': { arg: { runId: string }; res: void }
+  'runs:list': { arg: { projectId: string; sinceMs?: number }; res: Run[] }
+  'maintenance:get': { arg: { projectId: string }; res: MaintenanceInfo }
   'units:list': { arg: { projectId: string }; res: Unit[] }
   'specs:list': { arg: { projectId: string }; res: SpecSummary[] }
   'specs:read': { arg: { projectId: string; id: string }; res: SpecDoc }
@@ -35,6 +58,15 @@ export const CHANNELS: Channel[] = [
   'active:get',
   'active:set',
   'agents:detect',
+  'agents:setEnabled',
+  'commands:preview',
+  'commands:run',
+  'runs:attach',
+  'runs:write',
+  'runs:resize',
+  'runs:stop',
+  'runs:list',
+  'maintenance:get',
   'units:list',
   'specs:list',
   'specs:read',
@@ -44,10 +76,14 @@ export const CHANNELS: Channel[] = [
 ]
 
 export const PROJECT_CHANGED = 'project:changed'
+export const PTY_DATA = 'pty:data'
+export const PTY_EXIT = 'pty:exit'
 
 export interface SpecdeckApi {
   invoke<C extends Channel>(channel: C, arg?: IpcMap[C]['arg']): Promise<IpcMap[C]['res']>
   onProjectChanged(cb: (projectId: string) => void): () => void
+  onPtyData(cb: (e: { runId: string; data: string }) => void): () => void
+  onPtyExit(cb: (e: { runId: string; exitCode: number | null }) => void): () => void
 }
 
 declare global {

@@ -6,9 +6,13 @@ import { detectAgents } from './agents'
 import { detectAll, getAdapter } from './adapters'
 import type { Store } from './db'
 import type { ProjectWatcher } from './watcher'
+import type { CommandService } from './commands'
+import type { PtyManager } from './pty'
 
 const fw = z.enum(['openspec', 'speckit'])
 const id = z.string().min(1).max(200)
+const unitId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/).max(200)
+const agent = z.enum(['claude', 'codex'])
 const dirPath = z.string().min(1).refine((p) => {
   try {
     return statSync(p).isDirectory()
@@ -17,7 +21,7 @@ const dirPath = z.string().min(1).refine((p) => {
   }
 }, 'Not a directory')
 
-export function registerIpc(store: Store, watcher: ProjectWatcher): void {
+export function registerIpc(store: Store, watcher: ProjectWatcher, commands: CommandService, pty: PtyManager): void {
   const handle = <C extends Channel>(
     channel: C,
     schema: z.ZodType<IpcMap[C]['arg']>,
@@ -54,7 +58,24 @@ export function registerIpc(store: Store, watcher: ProjectWatcher): void {
   handle('projects:detect', z.object({ path: dirPath }), (a) => detectAll(a.path))
   handle('active:get', none, () => store.getActive())
   handle('active:set', z.object({ id: id.nullable() }), (a) => store.setActive(a.id))
-  handle('agents:detect', none, () => detectAgents(process.cwd()))
+  handle('agents:detect', none, () => detectAgents(process.cwd(), store))
+  handle('agents:setEnabled', z.object({ key: agent, enabled: z.boolean() }), (a) => store.setSetting(`agent:${a.key}:enabled`, String(a.enabled)))
+  handle(
+    'commands:preview',
+    z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('init'), path: dirPath, framework: fw, agents: z.array(agent).max(2) }),
+      z.object({ kind: z.literal('stage'), projectId: id, unitId: unitId, stage: z.enum(['explore', 'propose', 'apply', 'archive']), agent }),
+      z.object({ kind: z.literal('maintenance'), projectId: id, actionId: z.string().min(1).max(50) })
+    ]),
+    (a) => commands.preview(a)
+  )
+  handle('commands:run', z.object({ token: z.string().uuid() }), (a) => commands.run(a.token))
+  handle('runs:attach', z.object({ projectId: id }), (a) => pty.attach(a.projectId))
+  handle('runs:write', z.object({ runId: id, data: z.string().max(65536) }), (a) => pty.write(a.runId, a.data))
+  handle('runs:resize', z.object({ runId: id, cols: z.number().int().min(10).max(500), rows: z.number().int().min(2).max(200) }), (a) => pty.resize(a.runId, a.cols, a.rows))
+  handle('runs:stop', z.object({ runId: id }), (a) => pty.stop(a.runId))
+  handle('runs:list', z.object({ projectId: id, sinceMs: z.number().int().min(0).optional() }), (a) => store.listRuns(a.projectId, a.sinceMs))
+  handle('maintenance:get', z.object({ projectId: id }), (a) => proj(a.projectId).a.maintenance(proj(a.projectId).p.path))
   handle('units:list', z.object({ projectId: id }), (a) => proj(a.projectId).a.listUnits(proj(a.projectId).p.path))
   handle('specs:list', z.object({ projectId: id }), (a) => proj(a.projectId).a.listSpecs(proj(a.projectId).p.path))
   handle('specs:read', z.object({ projectId: id, id }), (a) => proj(a.projectId).a.readSpec(proj(a.projectId).p.path, a.id))

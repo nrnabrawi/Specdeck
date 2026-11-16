@@ -9,6 +9,8 @@ export interface FrameworkMeta {
   blurb: string
   stages: { id: string; label: string }[]
   initHint: string
+  /** Example stage command per agent, for the Add-ons page (actual commands come from the adapter). */
+  commandExample: { claude: string; codex: string }
 }
 
 export const FRAMEWORKS: Record<FrameworkId, FrameworkMeta> = {
@@ -24,7 +26,8 @@ export const FRAMEWORKS: Record<FrameworkId, FrameworkMeta> = {
       { id: 'apply', label: 'Apply' },
       { id: 'archive', label: 'Archive' }
     ],
-    initHint: 'openspec init'
+    initHint: 'openspec init',
+    commandExample: { claude: '/openspec-propose <name>', codex: '$openspec-propose <name>' }
   },
   speckit: {
     id: 'speckit',
@@ -39,6 +42,7 @@ export const FRAMEWORKS: Record<FrameworkId, FrameworkMeta> = {
       { id: 'implement', label: 'Implement' },
       { id: 'converge', label: 'Converge' }
     ],
-    initHint: 'specify init --here --integration <agent>'
+    initHint: 'specify init --here --integration <agent>',
+    commandExample: { claude: '/speckit-specify <description>', codex: '$speckit-specify <description>' }
   }
 }

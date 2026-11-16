@@ -1,6 +1,6 @@
-import type { DetectResult, Delta, SpecDoc, SpecSummary, Unit } from '../../shared/types'
+import type { AgentKey, Command, DetectResult, Delta, MaintenanceInfo, SpecDoc, SpecSummary, Unit } from '../../shared/types'
 
-// M1 subset of the adapter interface (docs/SPEC.md §7); init/stage/maintenance commands land in M2.
+// Adapter interface (docs/SPEC.md §7).
 export interface FrameworkAdapter {
   id: 'openspec' | 'speckit'
   detect(root: string): Promise<DetectResult>
@@ -10,4 +10,9 @@ export interface FrameworkAdapter {
   readDeltas(root: string, unitId: string): Promise<Delta[]>
   deltasForSpec(root: string, specId: string): Promise<Delta[]>
   searchSpecs(root: string, query: string): Promise<string[]>
+  initCommand(root: string, agents: AgentKey[]): Command
+  /** Throws a user-readable Error when the stage/agent combination is not available. */
+  stageCommand(root: string, unitName: string, stage: string, agent: AgentKey): Command
+  maintenance(root: string): Promise<MaintenanceInfo>
+  maintenanceCommand(root: string, actionId: string): Promise<Command>
 }
