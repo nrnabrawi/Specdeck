@@ -17,6 +17,7 @@ Versions are the latest on npm as of 2026-11-16 (`npm view`); exact-pin in `pack
 | Zustand | 5.1.0 | UI state (project, theme) |
 | Recharts | 3.10.1 | shadcn Chart base |
 | @dnd-kit/core | 6.3.1 | Board drag |
+| @xterm/addon-fit | see package.json | Terminal resize (added M2) |
 | @xterm/xterm | 6.0.0 | Embedded terminal UI |
 | node-pty | 1.1.0 | PTY for agent launch (native; needs Electron rebuild, risk) |
 | chokidar | 6.0.0 | File watching |
