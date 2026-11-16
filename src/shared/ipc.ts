@@ -12,6 +12,11 @@ export type PreviewReq =
   | { kind: 'stage'; projectId: string; unitId: string; stage: string; agent: AgentKey; input?: string }
   | { kind: 'maintenance'; projectId: string; actionId: string }
 
+/** Quick-panel request to the main window: navigate, or open the confirm step for a stage command (AC-003, AC-090). */
+export type PanelAction =
+  | { type: 'route'; to: string }
+  | { type: 'stage'; projectId: string; unitId: string; stage: string; input?: string; title: string }
+
 export interface Preview {
   token: string
   display: string
@@ -39,6 +44,8 @@ export interface IpcMap {
   'runs:resize': { arg: { runId: string; cols: number; rows: number }; res: void }
   'runs:stop': { arg: { runId: string }; res: void }
   'runs:list': { arg: { projectId: string; sinceMs?: number }; res: Run[] }
+  'panel:action': { arg: PanelAction; res: void }
+  'panel:hide': { arg: void; res: void }
   'wizard:load': { arg: { projectId: string }; res: unknown }
   'wizard:save': { arg: { projectId: string; state: unknown; replace?: string[] }; res: { wrote: string[]; draftOnly: boolean; needsConfirm?: string[] } }
   'wizard:import': { arg: { projectId: string; name: string }; res: { draft: OpenspecDraft; lossy: string[] } }
@@ -72,6 +79,8 @@ export const CHANNELS: Channel[] = [
   'runs:resize',
   'runs:stop',
   'runs:list',
+  'panel:action',
+  'panel:hide',
   'wizard:load',
   'wizard:save',
   'wizard:import',
@@ -89,11 +98,15 @@ export const CHANNELS: Channel[] = [
 export const PROJECT_CHANGED = 'project:changed'
 export const PTY_DATA = 'pty:data'
 export const PTY_EXIT = 'pty:exit'
+export const ACTIVE_CHANGED = 'active:changed'
+export const PANEL_ACTION = 'panel:do'
 
 export interface SpecdeckApi {
   invoke<C extends Channel>(channel: C, arg?: IpcMap[C]['arg']): Promise<IpcMap[C]['res']>
   onProjectChanged(cb: (projectId: string) => void): () => void
   onPtyData(cb: (e: { runId: string; data: string }) => void): () => void
+  onActiveChanged(cb: () => void): () => void
+  onPanelAction(cb: (a: PanelAction) => void): () => void
   onPtyExit(cb: (e: { runId: string; exitCode: number | null }) => void): () => void
 }
 

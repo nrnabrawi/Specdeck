@@ -17,19 +17,9 @@ import { unitWhen } from '@/lib/format'
 import { useActiveProject, useAgents, useFrameworkMeta, useRunList, useUnits } from '@/lib/queries'
 import { useRuns } from '@/lib/runs'
 import { cn } from '@/lib/utils'
+import { primaryAction } from '@/lib/stage'
 import type { FrameworkMeta } from '@shared/frameworks'
 import type { Run, Unit } from '@shared/types'
-
-type StageAction = { stage: string; label: string }
-
-/** Primary action per unit (AC-031): the stage command that moves it forward. OpenSpec units with all tasks done archive. */
-function primaryAction(u: Unit, meta: FrameworkMeta): StageAction | null {
-  if (u.archived) return null
-  const all = u.tasks.total > 0 && u.tasks.done === u.tasks.total
-  const stage = meta.stages.some((s) => s.id === 'archive') && all && u.stage === 'apply' ? 'archive' : u.stage
-  const label = meta.actions[stage]?.[u.tasks.done ? 1 : 0]
-  return label ? { stage, label } : null
-}
 
 function UnitCard({ u, meta, lastAgent, busy, onAction }: { u: Unit; meta: FrameworkMeta; lastAgent?: string; busy: boolean; onAction: (u: Unit, s: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: u.id, data: { unit: u }, disabled: u.archived })

@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { z } from 'zod'
-import { PROJECT_CHANGED, type Channel, type IpcMap } from '../shared/ipc'
+import { ACTIVE_CHANGED, PROJECT_CHANGED, type Channel, type IpcMap } from '../shared/ipc'
 import { detectAgents } from './agents'
 import { detectAll, getAdapter } from './adapters'
 import type { Store } from './db'
@@ -10,6 +10,7 @@ import type { CommandService } from './commands'
 import { loadChange, loadDraft, saveDraft } from './wizard'
 import { buildFeed, computeStats, type Recorder } from './activity'
 import type { PtyManager } from './pty'
+import type { Windows } from './windows'
 
 const fw = z.enum(['openspec', 'speckit'])
 const id = z.string().min(1).max(200)
@@ -23,7 +24,7 @@ const dirPath = z.string().min(1).refine((p) => {
   }
 }, 'Not a directory')
 
-export function registerIpc(store: Store, watcher: ProjectWatcher, commands: CommandService, pty: PtyManager, recorder: Recorder): void {
+export function registerIpc(store: Store, watcher: ProjectWatcher, commands: CommandService, pty: PtyManager, recorder: Recorder, windows: Windows): void {
   const handle = <C extends Channel>(
     channel: C,
     schema: z.ZodType<IpcMap[C]['arg']>,
@@ -59,7 +60,19 @@ export function registerIpc(store: Store, watcher: ProjectWatcher, commands: Com
   })
   handle('projects:detect', z.object({ path: dirPath }), (a) => detectAll(a.path))
   handle('active:get', none, () => store.getActive())
-  handle('active:set', z.object({ id: id.nullable() }), (a) => store.setActive(a.id))
+  handle('active:set', z.object({ id: id.nullable() }), (a) => {
+    store.setActive(a.id)
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send(ACTIVE_CHANGED) // keep the panel and main window in step
+  })
+  handle(
+    'panel:action',
+    z.discriminatedUnion('type', [
+      z.object({ type: z.literal('route'), to: z.enum(['/', '/board', '/wizard', '/addons', '/activity', '/stats', '/specs']) }),
+      z.object({ type: z.literal('stage'), projectId: id, unitId: unitId, stage: z.string().regex(/^[a-z]+$/).max(20), input: z.string().max(4000).optional(), title: z.string().max(200) })
+    ]),
+    (a) => windows.sendToMain(a)
+  )
+  handle('panel:hide', none, () => windows.hidePanel())
   handle('agents:detect', none, () => detectAgents(process.cwd(), store))
   handle('agents:setEnabled', z.object({ key: agent, enabled: z.boolean() }), (a) => store.setSetting(`agent:${a.key}:enabled`, String(a.enabled)))
   handle(

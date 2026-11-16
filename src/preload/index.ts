@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CHANNELS, PROJECT_CHANGED, PTY_DATA, PTY_EXIT, type SpecdeckApi } from '../shared/ipc'
+import { ACTIVE_CHANGED, CHANNELS, PANEL_ACTION, PROJECT_CHANGED, PTY_DATA, PTY_EXIT, type PanelAction, type SpecdeckApi } from '../shared/ipc'
 
 const api: SpecdeckApi = {
   invoke: (channel, arg) => {
@@ -10,6 +10,16 @@ const api: SpecdeckApi = {
     const h = (_e: unknown, id: string) => cb(id)
     ipcRenderer.on(PROJECT_CHANGED, h)
     return () => ipcRenderer.removeListener(PROJECT_CHANGED, h)
+  },
+  onActiveChanged: (cb) => {
+    const h = () => cb()
+    ipcRenderer.on(ACTIVE_CHANGED, h)
+    return () => ipcRenderer.removeListener(ACTIVE_CHANGED, h)
+  },
+  onPanelAction: (cb) => {
+    const h = (_e: unknown, a: PanelAction) => cb(a)
+    ipcRenderer.on(PANEL_ACTION, h)
+    return () => ipcRenderer.removeListener(PANEL_ACTION, h)
   },
   onPtyData: (cb) => {
     const h = (_e: unknown, p: { runId: string; data: string }) => cb(p)

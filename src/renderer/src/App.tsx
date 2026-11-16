@@ -14,6 +14,8 @@ import { applyTheme } from '@/lib/theme'
 import Board from '@/pages/Board'
 import Activity from '@/pages/Activity'
 import Wizard from '@/pages/Wizard'
+import Quick from '@/pages/Quick'
+import { useRuns } from '@/lib/runs'
 import Stats from '@/pages/Stats'
 import Addons from '@/pages/Addons'
 import Dashboard from '@/pages/Dashboard'
@@ -30,6 +32,18 @@ function Shell() {
 
   // AC-110: file changes in a project refresh its data.
   useEffect(() => window.specdeck.onProjectChanged((id) => void qc.invalidateQueries({ queryKey: ['p', id] })), [qc])
+  useEffect(() => window.specdeck.onActiveChanged(() => void qc.invalidateQueries()), [qc])
+
+  // Quick panel requests: navigate, or open the confirm step for the exact command (AC-003).
+  useEffect(
+    () =>
+      window.specdeck.onPanelAction((a) => {
+        if (a.type === 'route') return nav(a.to)
+        nav('/board')
+        void useRuns.getState().askToRun({ kind: 'stage', projectId: a.projectId, unitId: a.unitId, stage: a.stage, agent: useRuns.getState().agent, input: a.input }, a.title)
+      }),
+    [nav]
+  )
 
   if (loading) return null
   if (!project && !skipped) return <Navigate to="/onboarding" replace />
@@ -68,6 +82,7 @@ export default function App() {
         <HashRouter>
           <Routes>
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/quick" element={<Quick />} />
             <Route element={<Shell />}>
               <Route index element={<Dashboard />} />
               <Route path="board" element={<Board />} />
