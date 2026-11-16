@@ -8,7 +8,7 @@ export interface FrameworkDetection {
 
 export type PreviewReq =
   | { kind: 'init'; path: string; framework: FrameworkId; agents: AgentKey[] }
-  | { kind: 'stage'; projectId: string; unitId: string; stage: string; agent: AgentKey }
+  | { kind: 'stage'; projectId: string; unitId: string; stage: string; agent: AgentKey; input?: string }
   | { kind: 'maintenance'; projectId: string; actionId: string }
 
 export interface Preview {
@@ -38,6 +38,8 @@ export interface IpcMap {
   'runs:resize': { arg: { runId: string; cols: number; rows: number }; res: void }
   'runs:stop': { arg: { runId: string }; res: void }
   'runs:list': { arg: { projectId: string; sinceMs?: number }; res: Run[] }
+  'wizard:load': { arg: { projectId: string }; res: unknown }
+  'wizard:save': { arg: { projectId: string; state: unknown }; res: { wrote: string[]; draftOnly: boolean } }
   'activity:list': { arg: { projectId: string }; res: FeedItem[] }
   'stats:get': { arg: { projectId: string; days: 14 | 30 }; res: Stats }
   'maintenance:get': { arg: { projectId: string }; res: MaintenanceInfo }
@@ -68,6 +70,8 @@ export const CHANNELS: Channel[] = [
   'runs:resize',
   'runs:stop',
   'runs:list',
+  'wizard:load',
+  'wizard:save',
   'activity:list',
   'stats:get',
   'maintenance:get',

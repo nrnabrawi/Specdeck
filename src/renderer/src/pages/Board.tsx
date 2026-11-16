@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
-import { Info } from 'lucide-react'
+import { Info, Plus } from 'lucide-react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -125,6 +126,9 @@ export default function Board() {
         title={`${meta.unitName[0].toUpperCase()}${meta.unitName.slice(1)}s`}
         actions={
           <>
+            <Button asChild variant="outline">
+              <Link to="/wizard"><Plus /> New {meta.unitName}</Link>
+            </Button>
             <Select value={agent} onValueChange={(v) => setAgent(v as 'claude' | 'codex')}>
               <SelectTrigger className="w-44" aria-label="Run with">
                 <SelectValue placeholder="Run with…" />

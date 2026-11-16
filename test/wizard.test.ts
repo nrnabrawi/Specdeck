@@ -1,0 +1,102 @@
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, beforeAll, expect, test } from 'vitest'
+import { openspecAdapter } from '../src/main/adapters/openspec'
+import { speckitAdapter } from '../src/main/adapters/speckit'
+import { Store } from '../src/main/db'
+import { loadDraft, saveDraft, writeChangeDoc } from '../src/main/wizard'
+import { emptyOpenspec, openspecDocs, proposeInput, type OpenspecDraft } from '../src/shared/wizard'
+
+let root = ''
+let outside = ''
+beforeAll(() => {
+  root = mkdtempSync(join(tmpdir(), 'specdeck-wz-'))
+  outside = mkdtempSync(join(tmpdir(), 'specdeck-out-'))
+  execFileSync('openspec', ['init', '--tools', 'claude'], { cwd: root, stdio: 'ignore' })
+}, 60000)
+afterAll(() => {
+  rmSync(root, { recursive: true, force: true })
+  rmSync(outside, { recursive: true, force: true })
+})
+
+const draft = (): OpenspecDraft => ({
+  ...emptyOpenspec(),
+  name: 'add-sepa-payments',
+  why: 'EU customers want direct debit.',
+  what: '- Add a SEPA mandate model\n- Collect by direct debit',
+  impact: 'Affected specs: payments',
+  specs: [{ cap: 'payments', reqs: [{ op: 'ADDED', name: 'SEPA mandate', text: 'The system SHALL store a SEPA mandate.', scenarios: [{ name: 'create', when: 'a customer signs a mandate', then: 'it is stored as pending' }] }] }],
+  design: { context: 'No payments code yet.', decisions: '', risks: 'Provider choice open.' },
+  tasks: [{ group: 'Mandates', items: ['Add model', 'Add API'] }]
+})
+
+test('draft only in app data while the change does not exist; files appear once it does', async () => {
+  const store = new Store(':memory:')
+  const p = store.add(root, 'wz', 'openspec')
+  expect(await saveDraft(store, p, draft())).toEqual({ wrote: [], draftOnly: true })
+  expect(existsSync(join(root, 'openspec/changes/add-sepa-payments'))).toBe(false)
+  expect((loadDraft(store, p) as OpenspecDraft).name).toBe('add-sepa-payments')
+
+  mkdirSync(join(root, 'openspec/changes/add-sepa-payments')) // what the agent's propose does
+  const r = await saveDraft(store, p, draft())
+  expect(r.draftOnly).toBe(false)
+  expect(r.wrote.sort()).toEqual([
+    'openspec/changes/add-sepa-payments/design.md',
+    'openspec/changes/add-sepa-payments/proposal.md',
+    'openspec/changes/add-sepa-payments/specs/payments/spec.md',
+    'openspec/changes/add-sepa-payments/tasks.md'
+  ])
+  // real OpenSpec CLI accepts what the wizard wrote
+  const out = JSON.parse(execFileSync('openspec', ['validate', 'add-sepa-payments', '--json'], { cwd: root, encoding: 'utf8' }))
+  expect(JSON.stringify(out)).toContain('"valid":true')
+  const u = (await openspecAdapter.listUnits(root)).find((x) => x.name === 'add-sepa-payments')!
+  expect(u.tasks).toMatchObject({ done: 0, total: 2 })
+  expect((await openspecAdapter.readDeltas(root, 'add-sepa-payments'))[0]).toMatchObject({ op: 'ADDED', spec: 'payments' })
+})
+
+test('write scope: nothing outside the change folder, nothing but its markdown docs', async () => {
+  for (const rel of ['../x.md', '../../x.md', 'specs/../../x.md', 'notes.md', 'specs/Bad Name/spec.md', '/etc/passwd', 'specs/a/b/spec.md'])
+    await expect(writeChangeDoc(root, 'add-sepa-payments', rel, 'x')).rejects.toThrow()
+  for (const name of ['../evil', 'Bad', 'archive/x', 'missing-change']) await expect(writeChangeDoc(root, name, 'proposal.md', 'x')).rejects.toThrow()
+  // a symlinked specs/ folder must not redirect a write elsewhere
+  symlinkSync(outside, join(root, 'openspec/changes/add-sepa-payments/specs/link'))
+  await expect(writeChangeDoc(root, 'add-sepa-payments', 'specs/link/spec.md', 'x')).rejects.toThrow()
+  expect(existsSync(join(outside, 'spec.md'))).toBe(false)
+  expect(readFileSync(join(root, 'openspec/changes/add-sepa-payments/proposal.md'), 'utf8')).toContain('## Why')
+})
+
+test('invalid drafts are rejected before anything is stored', async () => {
+  const store = new Store(':memory:')
+  const p = store.add(root, 'wz', 'openspec')
+  await expect(saveDraft(store, p, { ...draft(), name: 'Not Kebab' })).rejects.toThrow()
+  await expect(saveDraft(store, p, { nope: 1 })).rejects.toThrow()
+  expect(loadDraft(store, p)).toBeNull()
+})
+
+test('empty steps write nothing; agent input is one line', () => {
+  expect(openspecDocs({ ...emptyOpenspec(), name: 'x' })).toEqual([])
+  expect(proposeInput(draft())).toBe('Why: EU customers want direct debit. What changes: Add a SEPA mandate model; Collect by direct debit. Impact: Affected specs: payments')
+})
+
+test('agent commands carry the wizard text as one visible argument', () => {
+  const inp = proposeInput({ ...draft(), why: 'Line one\nline two' })
+  const c = openspecAdapter.stageCommand(root, 'add-sepa-payments', 'propose', 'claude', inp)
+  expect(c.args).toHaveLength(1)
+  expect(c.args[0].startsWith('/openspec-propose add-sepa-payments Why: Line one line two')).toBe(true)
+  expect(c.args[0]).not.toContain('\n')
+  expect(openspecAdapter.stageCommand(root, 'add-sepa-payments', 'propose', 'claude').args[0]).toBe('/openspec-propose add-sepa-payments')
+})
+
+test('Spec Kit create uses /speckit-specify <description>; empty description is refused', () => {
+  const sk = mkdtempSync(join(tmpdir(), 'specdeck-wzsk-'))
+  try {
+    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh'], { cwd: sk, stdio: 'ignore' })
+    expect(speckitAdapter.stageCommand(sk, 'sepa', 'create', 'claude', 'Pay by\nSEPA').args[0]).toBe('/speckit-specify Pay by SEPA')
+    expect(() => speckitAdapter.stageCommand(sk, 'sepa', 'create', 'claude', '  ')).toThrow()
+    expect(speckitAdapter.stageCommand(sk, '001-x', 'plan', 'claude', 'Use SQLite').args[0]).toBe('/speckit-plan Feature directory: specs/001-x Use SQLite')
+  } finally {
+    rmSync(sk, { recursive: true, force: true })
+  }
+}, 60000)
