@@ -100,3 +100,61 @@ test('Spec Kit create uses /speckit-specify <description>; empty description is 
     rmSync(sk, { recursive: true, force: true })
   }
 }, 60000)
+
+// ---- Loading existing changes (files below are real /openspec-propose output, openspec 1.12.0 + claude 2.1.325) ----
+import { cpSync, readFileSync as rf } from 'node:fs'
+import { importChange } from '../src/shared/wizard'
+import { loadChange } from '../src/main/wizard'
+
+test('wizard-written files round-trip exactly through import', () => {
+  const d = draft()
+  const files = Object.fromEntries(openspecDocs(d).map((x) => [x.path, x.content]))
+  const r = importChange(d.name, files)
+  expect(r.lossy).toEqual([])
+  expect(r.draft).toEqual(d)
+})
+
+test('agent-written files load, and sections the form cannot show are flagged', async () => {
+  const dir = join(root, 'openspec/changes/agent-made')
+  cpSync(join(__dirname, 'fixtures/openspec-agent'), dir, { recursive: true })
+  const { draft: d, lossy } = await loadChange(root, 'agent-made')
+  expect(d.why).toContain('EU customers want to pay by SEPA direct debit')
+  expect(d.what.split('\n').filter((l) => l.startsWith('- '))).toHaveLength(3)
+  expect(d.specs.map((s) => s.cap)).toEqual(['invoice-collection', 'sepa-mandates'])
+  expect(d.specs[0].reqs[0]).toMatchObject({ op: 'ADDED', name: 'Collect due invoices by direct debit' })
+  expect(d.specs[0].reqs[0].scenarios[0]).toMatchObject({ name: 'Active mandate' })
+  expect(d.tasks.length).toBeGreaterThan(2)
+  expect(lossy).toContain('design.md') // Goals / Non-Goals, Migration Plan, Open Questions
+  expect(lossy).toContain('proposal.md') // Capabilities section
+})
+
+test('saving an unchanged loaded change rewrites nothing; edits ask before replacing lossy files', async () => {
+  const store = new Store(':memory:')
+  const p = store.add(root, 'wz', 'openspec')
+  const file = (f: string) => join(root, 'openspec/changes/agent-made', f)
+  const before = { design: rf(file('design.md'), 'utf8'), proposal: rf(file('proposal.md'), 'utf8'), tasks: rf(file('tasks.md'), 'utf8') }
+  const { draft: d } = await loadChange(root, 'agent-made')
+
+  expect((await saveDraft(store, p, d)).wrote).toEqual([])
+  expect(rf(file('design.md'), 'utf8')).toBe(before.design)
+
+  // edit a file the form represents fully (tasks): written directly, others untouched
+  const t = { ...d, tasks: [...d.tasks, { group: 'Docs', items: ['Write the runbook'] }] }
+  expect((await saveDraft(store, p, t)).wrote).toEqual(['openspec/changes/agent-made/tasks.md'])
+  expect(rf(file('tasks.md'), 'utf8')).toContain('Write the runbook')
+  expect(rf(file('design.md'), 'utf8')).toBe(before.design)
+
+  // edit a lossy file: nothing written until approved
+  const e = { ...t, design: { ...d.design, risks: d.design.risks + '\n- New risk' } }
+  const ask = await saveDraft(store, p, e)
+  expect(ask).toMatchObject({ wrote: [], needsConfirm: ['design.md'] })
+  expect(rf(file('design.md'), 'utf8')).toBe(before.design)
+  const ok = await saveDraft(store, p, e, ['design.md'])
+  expect(ok.wrote).toEqual(['openspec/changes/agent-made/design.md'])
+  expect(rf(file('design.md'), 'utf8')).toContain('New risk')
+})
+
+test('loadChange rejects bad or missing names', async () => {
+  await expect(loadChange(root, '../x')).rejects.toThrow()
+  await expect(loadChange(root, 'nope-nope')).rejects.toThrow()
+})

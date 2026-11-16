@@ -7,7 +7,7 @@ import { detectAll, getAdapter } from './adapters'
 import type { Store } from './db'
 import type { ProjectWatcher } from './watcher'
 import type { CommandService } from './commands'
-import { loadDraft, saveDraft } from './wizard'
+import { loadChange, loadDraft, saveDraft } from './wizard'
 import { buildFeed, computeStats, type Recorder } from './activity'
 import type { PtyManager } from './pty'
 
@@ -78,7 +78,8 @@ export function registerIpc(store: Store, watcher: ProjectWatcher, commands: Com
   handle('runs:stop', z.object({ runId: id }), (a) => pty.stop(a.runId))
   handle('runs:list', z.object({ projectId: id, sinceMs: z.number().int().min(0).optional() }), (a) => store.listRuns(a.projectId, a.sinceMs))
   handle('wizard:load', z.object({ projectId: id }), (a) => loadDraft(store, proj(a.projectId).p))
-  handle('wizard:save', z.object({ projectId: id, state: z.unknown() }), (a) => saveDraft(store, proj(a.projectId).p, a.state))
+  handle('wizard:save', z.object({ projectId: id, state: z.unknown(), replace: z.array(z.string().max(200)).max(30).optional() }), (a) => saveDraft(store, proj(a.projectId).p, a.state, a.replace))
+  handle('wizard:import', z.object({ projectId: id, name: unitId }), (a) => loadChange(proj(a.projectId).p.path, a.name))
   handle('activity:list', z.object({ projectId: id }), async (a) => {
     const { p, a: ad } = proj(a.projectId)
     return buildFeed(store.listEvents(p.id), store.listRuns(p.id), await ad.listUnits(p.path))

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -169,6 +171,8 @@ export default function Wizard() {
   const [sk, setSk] = useState<SpeckitDraft>(emptySpeckit())
   const [step, setStep] = useState(0)
   const [ready, setReady] = useState(false)
+  const [lossy, setLossy] = useState<string[]>([])
+  const [confirmReplace, setConfirmReplace] = useState<string[] | null>(null)
 
   useEffect(() => {
     if (loaded.isLoading || ready) return
@@ -190,14 +194,30 @@ export default function Wizard() {
   const previewText = isOs ? stepDocs.map((x) => (step === 1 ? `<!-- ${x.path} -->\n\n` : '') + x.content).join('\n') : step === 0 ? sk.description : step === 1 ? sk.planNotes : sk.tasksNotes
   const previewPath = isOs ? (os.name ? `openspec/changes/${os.name}/${OS_FILES[step]}` : `openspec/changes/<name>/${OS_FILES[step]}`) : step === 0 ? 'Input to /speckit-specify' : `Input to /speckit-${step === 1 ? 'plan' : 'tasks'} for specs/${sk.feature || '<feature>'}/`
 
-  const save = async () => {
+  const save = async (replace?: string[]) => {
     try {
-      const r = await window.specdeck.invoke('wizard:save', { projectId: project!.id, state: isOs ? os : sk })
-      toast.success(r.draftOnly ? 'Draft saved in Specdeck. Nothing was written to your repo.' : `Wrote ${r.wrote.length} file${r.wrote.length === 1 ? '' : 's'} to ${meta.marker}`)
+      const r = await window.specdeck.invoke('wizard:save', { projectId: project!.id, state: isOs ? os : sk, replace })
+      if (r.needsConfirm?.length) return setConfirmReplace(r.needsConfirm)
+      setConfirmReplace(null)
+      toast.success(r.draftOnly ? 'Draft saved in Specdeck. Nothing was written to your repo.' : r.wrote.length ? `Wrote ${r.wrote.length} file${r.wrote.length === 1 ? '' : 's'} to ${meta.marker}` : 'Nothing changed in your files.')
     } catch (e) {
       toast.error(cleanError(e))
     }
   }
+
+  const loadExisting = async (name: string) => {
+    try {
+      const r = await window.specdeck.invoke('wizard:import', { projectId: project!.id, name })
+      setOs(r.draft)
+      setLossy(r.lossy)
+      setStep(0)
+      toast.success(`Loaded ${name} from its files.`)
+    } catch (e) {
+      toast.error(cleanError(e))
+    }
+  }
+
+  const stepLossy = lossy.filter((f) => (step === 0 ? f === 'proposal.md' : step === 1 ? f.startsWith('specs/') : step === 2 ? f === 'design.md' : f === 'tasks.md'))
 
   const runAgent = () => {
     if (isOs) {
@@ -232,6 +252,21 @@ export default function Wizard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {isOs && step === 0 && features.length > 0 && (
+                <Field label="Start from an existing change" hint="Fills the form from its files. Files you do not change are left as they are.">
+                  <Select value="" onValueChange={loadExisting}>
+                    <SelectTrigger aria-label="Existing change"><SelectValue placeholder="Choose a change…" /></SelectTrigger>
+                    <SelectContent>{features.map((u) => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </Field>
+              )}
+              {isOs && stepLossy.length > 0 && (
+                <Alert>
+                  <AlertDescription>
+                    {stepLossy.join(', ')} has content this form cannot show (other sections, checked tasks, extra scenario steps). If you change this step, saving replaces the file and asks you first.
+                  </AlertDescription>
+                </Alert>
+              )}
               {isOs ? (
                 <OpenspecWizard d={os} set={setOs} step={step} nameError={nameError} />
               ) : step === 0 ? (
@@ -265,7 +300,7 @@ export default function Wizard() {
                 </div>
               )}
               <div className="flex items-center justify-between pt-2">
-                <Button variant="outline" onClick={save}>Save draft</Button>
+                <Button variant="outline" onClick={() => save()}>Save draft</Button>
                 <div className="flex gap-2">
                   {step > 0 && <Button variant="outline" onClick={() => setStep(step - 1)}>Back</Button>}
                   {!last && <Button variant="outline" onClick={() => setStep(step + 1)}>Next: {steps[step + 1]}</Button>}
@@ -277,6 +312,21 @@ export default function Wizard() {
           <Preview path={previewPath} text={previewText} />
         </div>
       </QueryState>
+      <Dialog open={!!confirmReplace} onOpenChange={(o) => !o && setConfirmReplace(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace files with the form's version?</DialogTitle>
+            <DialogDescription>
+              These files contain content the form cannot show. Saving writes only what the form has, so anything else in them is lost:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="list-disc pl-5 font-mono text-sm">{confirmReplace?.map((f) => <li key={f}>{f}</li>)}</ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmReplace(null)}>Cancel</Button>
+            <Button onClick={() => save(confirmReplace ?? [])}>Replace</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
