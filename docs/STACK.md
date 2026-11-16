@@ -30,6 +30,8 @@ Versions are the latest on npm as of 2026-11-16 (`npm view`); exact-pin in `pack
 | @vitejs/plugin-react | 6.3.0 | React in Vite |
 | @types/node, @types/react, @types/react-dom | 26.6.6, 19.3.0, 19.3.0 | Typings |
 | clsx, tailwind-merge, class-variance-authority, radix-ui | 2.1.1, 3.7.0, 0.7.1, 1.8.1 | shadcn runtime deps |
-| Fonts: Inter, JetBrains Mono | - | Per design tokens |
+| react-markdown + remark-gfm | 10.1.0, 4.0.1 | Read-only Markdown (no raw HTML), chosen at M1 |
+| @fontsource/inter, @fontsource/jetbrains-mono | 5.3.0, 5.3.0 | Fonts bundled locally (no network) |
+| lucide-react, cmdk, sonner | see package.json | shadcn component deps (icons, command palette, toasts) |
 
 Markdown rendering library and diff helpers: not chosen; will ask before adding (scope rule 3).

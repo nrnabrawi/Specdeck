@@ -101,6 +101,8 @@ interface FrameworkAdapter {
   listSpecs(root): Promise<Spec[]>
   readSpec(root, id): Promise<SpecDoc>
   readDeltas(root, unitId): Promise<Delta[]>  // OpenSpec; Spec Kit returns []
+  deltasForSpec(root, specId): Promise<Delta[]>  // incl. archived (History tab); added M1
+  searchSpecs(root, query): Promise<string[]>    // added M1 (AC-040)
   taskProgress(root, unitId): Promise<Tasks>
   stageCommand(unit, stage, agent): Command   // verified syntax per agent
   maintenanceActions(): Action[]              // add-ons page
