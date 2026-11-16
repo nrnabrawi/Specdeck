@@ -1,26 +1,11 @@
-import { join } from 'node:path'
 import { app, BrowserWindow } from 'electron'
 import { Recorder } from './activity'
 import { Store } from './db'
 import { CommandService } from './commands'
 import { broadcastChanged, registerIpc } from './ipc'
 import { PtyManager } from './pty'
+import { createWindows } from './windows'
 import { ProjectWatcher } from './watcher'
-
-function createWindow(): void {
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    webPreferences: {
-      preload: join(import.meta.dirname, '../preload/index.cjs'),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false
-    }
-  })
-  if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
-  else win.loadFile(join(import.meta.dirname, '../renderer/index.html'))
-}
 
 app.whenReady().then(() => {
   const store = new Store(app.getPath('userData'))
@@ -32,9 +17,8 @@ app.whenReady().then(() => {
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload)
   })
   app.on('before-quit', () => pty.stopAll())
-  registerIpc(store, watcher, new CommandService(store, pty), pty, recorder)
-  createWindow()
+  const windows = createWindows()
+  registerIpc(store, watcher, new CommandService(store, pty), pty, recorder, windows)
 })
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+// The app lives in the tray (AC-091): closing windows does not quit; Quit in the tray menu does.
+app.on('window-all-closed', () => undefined)
