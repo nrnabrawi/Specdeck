@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const cli = (cwd: string, ...args: string[]) => execFileSync('openspec', args, { cwd, encoding: 'utf8' })
+const cli = (cwd: string, ...args: string[]) => execFileSync('openspec', args, { cwd, encoding: 'utf8', shell: process.platform === 'win32' })
 
 const w = (root: string, rel: string, body: string) => {
   const p = join(root, rel)

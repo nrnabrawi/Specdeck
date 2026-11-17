@@ -14,7 +14,7 @@ let outside = ''
 beforeAll(() => {
   root = mkdtempSync(join(tmpdir(), 'specdeck-wz-'))
   outside = mkdtempSync(join(tmpdir(), 'specdeck-out-'))
-  execFileSync('openspec', ['init', '--tools', 'claude'], { cwd: root, stdio: 'ignore' })
+  execFileSync('openspec', ['init', '--tools', 'claude'], { cwd: root, stdio: 'pipe', shell: process.platform === 'win32' })
 }, 60000)
 afterAll(() => {
   rmSync(root, { recursive: true, force: true })
@@ -49,7 +49,7 @@ test('draft only in app data while the change does not exist; files appear once 
     'openspec/changes/add-sepa-payments/tasks.md'
   ])
   // real OpenSpec CLI accepts what the wizard wrote
-  const out = JSON.parse(execFileSync('openspec', ['validate', 'add-sepa-payments', '--json'], { cwd: root, encoding: 'utf8' }))
+  const out = JSON.parse(execFileSync('openspec', ['validate', 'add-sepa-payments', '--json'], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' }))
   expect(JSON.stringify(out)).toContain('"valid":true')
   const u = (await openspecAdapter.listUnits(root)).find((x) => x.name === 'add-sepa-payments')!
   expect(u.tasks).toMatchObject({ done: 0, total: 2 })
@@ -92,7 +92,7 @@ test('agent commands carry the wizard text as one visible argument', () => {
 test('Spec Kit create uses /speckit-specify <description>; empty description is refused', () => {
   const sk = mkdtempSync(join(tmpdir(), 'specdeck-wzsk-'))
   try {
-    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh'], { cwd: sk, stdio: 'ignore' })
+    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh'], { cwd: sk, stdio: 'pipe' })
     expect(speckitAdapter.stageCommand(sk, 'sepa', 'create', 'claude', 'Pay by\nSEPA').args[0]).toBe('/speckit-specify Pay by SEPA')
     expect(() => speckitAdapter.stageCommand(sk, 'sepa', 'create', 'claude', '  ')).toThrow()
     expect(speckitAdapter.stageCommand(sk, '001-x', 'plan', 'claude', 'Use SQLite').args[0]).toBe('/speckit-plan Feature directory: specs/001-x Use SQLite')
