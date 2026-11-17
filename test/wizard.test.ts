@@ -92,7 +92,7 @@ test('agent commands carry the wizard text as one visible argument', () => {
 test('Spec Kit create uses /speckit-specify <description>; empty description is refused', () => {
   const sk = mkdtempSync(join(tmpdir(), 'specdeck-wzsk-'))
   try {
-    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh'], { cwd: sk, stdio: 'pipe' })
+    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh', '--ignore-agent-tools'], { cwd: sk, stdio: 'pipe' })
     expect(speckitAdapter.stageCommand(sk, 'sepa', 'create', 'claude', 'Pay by\nSEPA').args[0]).toBe('/speckit-specify Pay by SEPA')
     expect(() => speckitAdapter.stageCommand(sk, 'sepa', 'create', 'claude', '  ')).toThrow()
     expect(speckitAdapter.stageCommand(sk, '001-x', 'plan', 'claude', 'Use SQLite').args[0]).toBe('/speckit-plan Feature directory: specs/001-x Use SQLite')

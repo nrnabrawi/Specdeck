@@ -19,7 +19,7 @@ const feature = (...files: string[]) => {
 beforeAll(() => {
   root = mkdtempSync(join(tmpdir(), 'specdeck-sk-'))
   for (const agent of ['claude', 'codex'])
-    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', agent, '--script', 'sh'], { cwd: root, stdio: 'pipe' })
+    execFileSync('specify', ['init', '--here', '--force', '--non-interactive', '--integration', agent, '--script', 'sh', '--ignore-agent-tools'], { cwd: root, stdio: 'pipe' })
 }, 120000)
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 
