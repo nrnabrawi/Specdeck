@@ -9,3 +9,4 @@ Out-of-scope ideas, one line each. Not built until promoted into SPEC.md.
 - Installer icon and desktopName: app uses the default Electron icon.
 - Dev-only packages (tailwind/lightningcss natives) ship inside the app because they sit in dependencies; move to devDependencies to shrink installers.
 - Name check: npm package `specdeck` (OpenSpec dashboard, MIT, AidanFeess/specdeck) already exists.
+- Installers paused (webapp first): CI no longer runs electron-builder; add back with --publish never. Windows: app execFile can't spawn npm .cmd shims (openspec.cmd) — fix before any Windows release.

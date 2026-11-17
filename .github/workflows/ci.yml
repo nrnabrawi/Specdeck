@@ -24,10 +24,3 @@ jobs:
         if: runner.os == 'Linux'
       - run: npx playwright test
         if: runner.os == 'Windows'
-      - run: npx electron-builder ${{ runner.os == 'Linux' && '--linux' || '--win' }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: installer-${{ matrix.os }}
-          path: |
-            dist/*.AppImage
-            dist/*.exe
